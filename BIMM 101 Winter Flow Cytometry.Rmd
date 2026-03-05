@@ -28,8 +28,8 @@ setwd("~/Documents/GitHub/KR-BIMM-101")
 
 ```{r}
 TabA0<-read_csv("W26FCBIMM101_2.csv")
-QC00<-read_csv("Copy of Winter 2026 Flow Cytometry - C01_C02 QC.csv")
-FC00<-read_csv("Copy of Winter 2026 Flow Cytometry - C01_C02 Flow.csv")
+QC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 QC.csv")
+FC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 Flow.csv")
 ```
 
 ```{r}
