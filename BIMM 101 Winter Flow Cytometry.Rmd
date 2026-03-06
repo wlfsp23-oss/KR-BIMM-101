@@ -30,6 +30,8 @@ setwd("~/Documents/GitHub/KR-BIMM-101")
 TabA0<-read_csv("W26FCBIMM101_2.csv")
 QC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 QC.csv")
 FC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 Flow.csv")
+QD00<-read_csv("KR Winter 2026 Flow Cytometry - D01_D02 QC.csv")
+FD00<-read_csv("KR Winter 2026 Flow Cytometry - D01_D02 Flow.csv")
 ```
 
 ```{r}
@@ -54,13 +56,18 @@ SecF<-TabA1 %>%
 ```
 
 ```{r}
-###Merge C00 QC Data and Flow Data
+###Merge C00 AND D00 QC Data and Flow Data
 merged_C00 <- merge(x = FC00, y = QC00, by = "Sample #", all.x = TRUE)
+
+merged_D00 <- merge(x = FD00, y = QD00, by = "Sample #", all.x = TRUE)
+
 ```
 
 ```{r}
 ###Filter Out FAILED QC
-clean_C00<- filter(merged_C00, .by = NULL, .preserve = FALSE)
+clean_C00<- filter(merged_C00, `QC state`=="GOOD"|`QC state`=="OK")
+clean_D00<- filter(merged_D00, `QC state`=="GOOD"|`QC state`=="OK")
+
 ```
 
 
@@ -175,8 +182,23 @@ print(PlotF)
 
 ```{r}
 ###C00 Flow and QC filter for only OK and GOOD quality plot
+PlotC2<-ggplot(clean_C00,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section C Filtered n=29",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotC2)  
 ```
 
+```{r}
+###D00 Flow and QC filter for only OK and GOOD quality plot
+PlotD2<-ggplot(clean_D00,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section D Filtered n=51",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotD2)  
+```
 
 
 ```{r}
