@@ -252,6 +252,11 @@ Plot2_Log<-ggplot(summarydf_log, aes(x = reorder(`Transformation type`, mean_log
   theme_minimal() +
   scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")
 print(Plot2_Log)
+ggsave("Plot2_log.png", 
+       plot = Plot2_Log, 
+       width = 10,       
+       height = 6,      
+       dpi = 300)
 ```
 
 
@@ -271,8 +276,15 @@ logsum<- TabA2 %>%
   group_by(Promoter, Protein) %>%
   summarize(mean_log_gfp = mean(Log_GFP, na.rm = TRUE),se_log_gfp = sd(Log_GFP, na.rm = TRUE) / sqrt(n()),.groups = "drop")
 
-ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
+gglogsum<- ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_brewer(palette = "Set1") +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")
+print(gglogsum)
+
+ggsave("gglogsum.png", 
+       plot = gglogsum, 
+       width = 10,       
+       height = 6,      
+       dpi = 300)
 ```
 
 
