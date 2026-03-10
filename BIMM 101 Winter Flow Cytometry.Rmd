@@ -267,7 +267,7 @@ isumm<- TabA2 %>%
 
 ggplot(isumm, aes(x = Promoter, y = mean_gfp, fill = Protein)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + # 'dodge' puts bars side-by-side
-  geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp),position = position_dodge(width = 0.9), width = 0.2) + theme_minimal() +scale_fill_brewer(palette = "Set1") + # Distinct colors for Staygold/UKG1
+  geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp),position = position_dodge(width = 0.9), width = 0.2) + theme_minimal() +scale_fill_grey() + # Distinct colors for Staygold/UKG1
   labs(title = "Protein Expression and Promoter Type",x = "Promoter",y = "Mean FITC (GFP)")
 ```
 ```{r}
@@ -277,7 +277,7 @@ logsum<- TabA2 %>%
   summarize(mean_log_gfp = mean(Log_GFP, na.rm = TRUE),se_log_gfp = sd(Log_GFP, na.rm = TRUE) / sqrt(n()),.groups = "drop")
 
 gglogsum<- ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_brewer(palette = "Set1") +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_grey() +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")
 print(gglogsum)
 
 ggsave("gglogsum.png", 
