@@ -22,7 +22,7 @@ library("dplyr")
 ```
 
 ```{r}
-setwd("~/Documents/GitHub/KR-BIMM-101")
+#setwd("~/Documents/GitHub/KR-BIMM-101")
 ```
 
 
@@ -39,6 +39,9 @@ FD00<-read_csv("KR Winter 2026 Flow Cytometry - D01_D02 Flow.csv")
 TabA1 <- TabA0 %>% filter(!is.na(`Mean FITC (GFP)`))
 ###Group sections
 TabA1$MainSection <- substr(TabA1$Section, 1, 1)
+###Log Transform
+TabA1$Fluorescence <- as.numeric(gsub(",", "", TabA1$`Mean FITC (GFP)`))
+TabA1$Log_GFP <- log10(TabA1$Fluorescence + 1)
 
 ###SectionDf
 SecA<-TabA1 %>% 
@@ -68,6 +71,31 @@ merged_D00 <- merge(x = FD00, y = QD00, by = "Sample #", all.x = TRUE)
 clean_C00<- filter(merged_C00, `QC state`=="GOOD"|`QC state`=="OK")
 clean_D00<- filter(merged_D00, `QC state`=="GOOD"|`QC state`=="OK")
 
+```
+
+```{r}
+###Comparison setup
+TabA2 <- TabA1 %>%
+  mutate(Fluorescence = as.numeric(gsub(",", "", `Mean FITC (GFP)`))) %>%
+  filter(!is.na(Fluorescence)) %>%
+  mutate(Promoter = case_when(grepl("pGK1", `Transformation type`) ~ "pGK1",grepl("pTDH3", `Transformation type`) ~ "pTDH3",grepl("pTef1", `Transformation type`) ~ "pTef1",TRUE ~ "Other/Default"),Protein = case_when(grepl("Staygold", `Transformation type`, ignore.case = TRUE) ~ "Staygold",grepl("UKG1", `Transformation type`, ignore.case = TRUE) ~ "UKG1",TRUE ~ "Unknown"))
+```
+
+```{r}
+###Comparison promoter
+table_promoters <- TabA2 %>%
+  group_by(Promoter) %>%
+  summarize(Avg_Fluorescence = mean(Fluorescence),Std_Dev = sd(Fluorescence),N_Samples = n()) %>% arrange(desc(Avg_Fluorescence))
+print(table_promoters)
+```
+
+```{r}
+###Comparison GFP
+table_proteins <- TabA2 %>%
+  group_by(Protein) %>%
+  summarize(Avg_Fluorescence = mean(Fluorescence),Std_Dev = sd(Fluorescence),N_Samples = n()) %>%
+  arrange(desc(Avg_Fluorescence))
+print(table_proteins)
 ```
 
 
@@ -212,5 +240,65 @@ Plot2<-ggplot(summary_df,aes(x = reorder(`Transformation type`,mean_gfp),y=mean_
   theme_minimal() +
   labs(title = "Average Mean GFP Expression across sections",subtitle = "Standard Error for error bars",x = "Transformation Type",y = "Average Mean FITC")
 print(Plot2)
+```
+```{r}
+###Plot 3:Final comparison using means with SD on LOGARITHMIC DATA
+summarydf_log<-TabA1 %>% group_by(`Transformation type`) %>%
+  summarize(mean_log = mean(Log_GFP, na.rm = TRUE),sd_log = sd(Log_GFP, na.rm = TRUE),n = n(),se_log = sd_log / sqrt(n))
+
+Plot2_Log<-ggplot(summarydf_log, aes(x = reorder(`Transformation type`, mean_log),y = mean_log,fill = mean_log)) +
+  geom_bar(stat = "identity") +scale_fill_gradient(low = "darkgreen", high = "lawngreen") +
+  geom_errorbar(aes(ymin = mean_log - se_log, ymax = mean_log + se_log), width = 0.2) +coord_flip() +
+  theme_minimal() +
+  scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")
+print(Plot2_Log)
+```
+
+
+```{r}
+###Group Bar
+isumm<- TabA2 %>%
+  group_by(Promoter, Protein) %>%
+  summarize(
+    mean_gfp = mean(Fluorescence),
+    se_gfp = sd(Fluorescence) / sqrt(n())
+  )
+
+ggplot(isumm, aes(x = Promoter, y = mean_gfp, fill = Protein)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + # 'dodge' puts bars side-by-side
+  geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp),position = position_dodge(width = 0.9), width = 0.2) + theme_minimal() +scale_fill_brewer(palette = "Set1") + # Distinct colors for Staygold/UKG1
+  labs(title = "Protein Expression and Promoter Type",x = "Promoter",y = "Mean FITC (GFP)")
+```
+```{r}
+###Log Bar
+logsum<- TabA2 %>%
+  group_by(Promoter, Protein) %>%
+  summarize(mean_log_gfp = mean(Log_GFP, na.rm = TRUE),se_log_gfp = sd(Log_GFP, na.rm = TRUE) / sqrt(n()),.groups = "drop")
+
+ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + 
+  geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp, 
+                    ymax = mean_log_gfp + se_log_gfp),
+                position = position_dodge(width = 0.9), 
+                width = 0.2) + 
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") + 
+  labs(title = "Protein Expression by Promoter Type on Log scale",
+       x = "Promoter",
+       y = "Log10(Mean FITC)")
+```
+
+
+```{r}
+###ANOVA1
+anova1<-aov(Log_GFP~Promoter*Protein,data=TabA2)
+summary(anova1)
+```
+
+```{r}
+###ANOVA2
+anova2<-aov(Log_GFP~as.factor(`Transformation type`),data=TabA2)
+tk<-TukeyHSD(anova2)
+print(tukey_results)
 ```
 
