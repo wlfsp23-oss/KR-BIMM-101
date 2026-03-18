@@ -1,0 +1,303 @@
+---
+title: "BIMM 101 Flow Cytometry"
+output: html_document
+date: "2026-03-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages('tidyverse')
+#install.packages('ggplot2')
+#install.packages("dplyr")
+```
+
+
+```{r}
+library('ggplot2')
+library('tidyverse')
+library("dplyr")
+```
+
+```{r}
+#setwd("~/Documents/GitHub/KR-BIMM-101")
+```
+
+
+```{r}
+TabA0<-read_csv("W26FCBIMM101_2.csv")
+QC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 QC.csv")
+FC00<-read_csv("KR Winter 2026 Flow Cytometry - C01_C02 Flow.csv")
+QD00<-read_csv("KR Winter 2026 Flow Cytometry - D01_D02 QC.csv")
+FD00<-read_csv("KR Winter 2026 Flow Cytometry - D01_D02 Flow.csv")
+```
+
+```{r}
+###Filter N/A in TabA
+TabA1 <- TabA0 %>% filter(!is.na(`Mean FITC (GFP)`))
+###Group sections
+TabA1$MainSection <- substr(TabA1$Section, 1, 1)
+###Log Transform
+TabA1$Fluorescence <- as.numeric(gsub(",", "", TabA1$`Mean FITC (GFP)`))
+TabA1$Log_GFP <- log10(TabA1$Fluorescence + 1)
+
+###SectionDf
+SecA<-TabA1 %>% 
+  filter(MainSection == "A")
+SecB<-TabA1 %>% 
+  filter(MainSection == "B")
+SecC<-TabA1 %>% 
+  filter(MainSection == "C")
+SecD<-TabA1 %>% 
+  filter(MainSection == "D")
+SecE<-TabA1 %>% 
+  filter(MainSection == "E")
+SecF<-TabA1 %>% 
+  filter(MainSection == "F")
+```
+
+```{r}
+###Merge C00 AND D00 QC Data and Flow Data
+merged_C00 <- merge(x = FC00, y = QC00, by = "Sample #", all.x = TRUE)
+
+merged_D00 <- merge(x = FD00, y = QD00, by = "Sample #", all.x = TRUE)
+
+```
+
+```{r}
+###Filter Out FAILED QC
+clean_C00<- filter(merged_C00, `QC state`=="GOOD"|`QC state`=="OK")
+clean_D00<- filter(merged_D00, `QC state`=="GOOD"|`QC state`=="OK")
+
+```
+
+```{r}
+###Comparison setup
+TabA2 <- TabA1 %>%
+  mutate(Fluorescence = as.numeric(gsub(",", "", `Mean FITC (GFP)`))) %>%
+  filter(!is.na(Fluorescence)) %>%
+  mutate(Promoter = case_when(grepl("pGK1", `Transformation type`) ~ "pGK1",grepl("pTDH3", `Transformation type`) ~ "pTDH3",grepl("pTef1", `Transformation type`) ~ "pTef1",TRUE ~ "Other/Default"),Protein = case_when(grepl("Staygold", `Transformation type`, ignore.case = TRUE) ~ "Staygold",grepl("UKG1", `Transformation type`, ignore.case = TRUE) ~ "UKG1",TRUE ~ "Unknown"))
+```
+
+```{r}
+###Comparison promoter
+table_promoters <- TabA2 %>%
+  group_by(Promoter) %>%
+  summarize(Avg_Fluorescence = mean(Fluorescence),Std_Dev = sd(Fluorescence),N_Samples = n()) %>% arrange(desc(Avg_Fluorescence))
+print(table_promoters)
+```
+
+```{r}
+###Comparison GFP
+table_proteins <- TabA2 %>%
+  group_by(Protein) %>%
+  summarize(Avg_Fluorescence = mean(Fluorescence),Std_Dev = sd(Fluorescence),N_Samples = n()) %>%
+  arrange(desc(Avg_Fluorescence))
+print(table_proteins)
+```
+
+
+```{r}
+###Cleanup Names for PlotA
+plotlabs <-c(
+  "HDR1: In_ymUkG1"           = "ymUkG1",
+  "HDR2: In_yStayGold"        = "yStayGold",
+  "HDR3: In_pGK1_mUKG1"       = "pGK1-mUKG1",
+  "HDR4: In_pGK1_yUKG1"       = "pGK1-yUKG1",
+  "HDR5: In_pGK1_Staygold"    = "pGK1-Staygold",
+  "HDR6:In_pGK1_yStaygold"    = "pGK1-yStaygold",
+  "HDR7:In_pTDH3_mUKG1"       = "pTDH3-mUKG1",
+  "HDR8: In_pTDH3_yUKG1"      = "pTDH3-yUKG1",
+  "HDR9: In_pTDH3_Staygold"   = "pTDH3-Staygold",
+  "HDR10: In_pTDH3_yStaygold" = "pTDH3-yStaygold",
+  "HDR11: In_pTef1_mUKG1"     = "pTef1-mUKG1",
+  "HDR12: In_pTef1_yUKG1"     = "pTef1-yUKG1",
+  "HDR13: In_pTef1_Staygold"  = "pTef1-Staygold",
+  "HDR14: In_pTef1_yStaygold" = "pTef1-yStaygold")
+
+###cleanup names for PlotB
+plotlabsB<-c( 
+  "HDR1: In_ymUkG1"           = "HDR1",
+  "HDR2: In_yStayGold"        = "HDR2",
+  "HDR3: In_pGK1_mUKG1"       = "HDR3",
+  "HDR4: In_pGK1_yUKG1"       = "HDR4",
+  "HDR5: In_pGK1_Staygold"    = "HDR5",
+  "HDR6:In_pGK1_yStaygold"    = "HDR6",
+  "HDR7:In_pTDH3_mUKG1"       = "HDR7",
+  "HDR8: In_pTDH3_yUKG1"      = "HDR8",
+  "HDR9: In_pTDH3_Staygold"   = "HDR9",
+  "HDR10: In_pTDH3_yStaygold" = "HDR10",
+  "HDR11: In_pTef1_mUKG1"     = "HDR11",
+  "HDR12: In_pTef1_yUKG1"     = "HDR12",
+  "HDR13: In_pTef1_Staygold"  = "HDR13",
+  "HDR14: In_pTef1_yStaygold" = "HDR14")
+```
+
+```{r}
+###Plot 1: Comparing median values and making boxplot for each transformation
+Plot1<-ggplot(TabA1,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) across all sections n=262",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))+coord_cartesian(ylim = c(0, 150000))
+  
+print(Plot1)
+#x reorder displays bars from lowest gfp to high, FUN=median decided as best method to approximate center values, jitter shows outlier values a little off center to easily identify
+```
+
+```{r}
+###Plot A: Comparing median GFP values with boxplot in Section A
+PlotA<-ggplot(SecA,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section A n=46",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotA)
+```
+
+```{r}
+###Plot B: Comparing median GFP values with boxplot in Section B
+PlotB<-ggplot(SecB,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section B n=48",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotB)
+```
+
+```{r}
+###Plot C: Comparing median GFP values with boxplot in Section C
+PlotC<-ggplot(SecC,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section C n=45",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotC)  
+```
+```{r}
+###Plot D: Comparing median GFP values with boxplot in Section D
+PlotD<-ggplot(SecC,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section D n=40",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotD)  
+```
+
+
+```{r}
+###Plot E: Comparing median GFP values with boxplot in Section E
+PlotE<-ggplot(SecC,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section E n=35",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotE)  
+```
+
+
+```{r}
+###Plot F: Comparing median GFP values with boxplot in Section F
+PlotF<-ggplot(SecF,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`,fill=`Transformation type`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7)+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section F n=48",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotF)  
+```
+
+```{r}
+###C00 Flow and QC filter for only OK and GOOD quality plot
+PlotC2<-ggplot(clean_C00,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7,fill='lightblue2')+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section C Filtered n=29",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotC2)  
+```
+
+```{r}
+###D00 Flow and QC filter for only OK and GOOD quality plot
+PlotD2<-ggplot(clean_D00,aes(x=reorder(`Transformation type`,`Mean FITC (GFP)`,FUN=median),y=`Mean FITC (GFP)`))+
+  geom_boxplot(outlier.shape=NA,alpha=0.7,fill='green2')+
+  geom_jitter(width = 0.2,alpha = 0.5)+
+  labs(title="Mean FITC (GFP) in Section D Filtered n=51",x="Transformation Type",y="Mean FITC (GFP)")+
+  scale_x_discrete(labels=plotlabs)+theme_minimal()+theme(axis.text.x=element_text(angle=45,hjust = 1))
+print(PlotD2)  
+```
+
+
+```{r}
+###Plot 2:Final comparison using means with SD
+summary_df<-TabA1 %>%group_by(`Transformation type`) %>%
+  summarize(mean_gfp= mean(`Mean FITC (GFP)`),sd_gfp = sd(`Mean FITC (GFP)`),n = n(),se_gfp = sd_gfp / sqrt(n))
+
+Plot2<-ggplot(summary_df,aes(x = reorder(`Transformation type`,mean_gfp),y=mean_gfp,fill=mean_gfp)) +
+  geom_bar(stat = "identity") +scale_fill_gradient(low = "darkgreen", high = "green")+
+  geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp), width = 0.2) +coord_flip() +
+  theme_minimal() +
+  labs(title = "Average Mean GFP Expression across sections",subtitle = "Standard Error for error bars",x = "Transformation Type",y = "Average Mean FITC")
+print(Plot2)
+```
+```{r}
+###Plot 3:Final comparison using means with SD on LOGARITHMIC DATA
+summarydf_log<-TabA1 %>% group_by(`Transformation type`) %>%
+  summarize(mean_log = mean(Log_GFP, na.rm = TRUE),sd_log = sd(Log_GFP, na.rm = TRUE),n = n(),se_log = sd_log / sqrt(n))
+
+Plot2_Log<-ggplot(summarydf_log, aes(x = reorder(`Transformation type`, mean_log),y = mean_log,fill = mean_log)) +
+  geom_bar(stat = "identity") +scale_fill_gradient(low = "darkgreen", high = "lawngreen") +
+  geom_errorbar(aes(ymin = mean_log - se_log, ymax = mean_log + se_log), width = 0.2) +coord_flip() +
+  theme_minimal() +
+  scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")
+print(Plot2_Log)
+ggsave("Plot2_log.png", 
+       plot = Plot2_Log, 
+       width = 10,       
+       height = 6,      
+       dpi = 300)
+```
+
+
+```{r}
+###Group Bar
+isumm<- TabA2 %>%
+  group_by(Promoter, Protein) %>% summarize(mean_gfp = mean(Fluorescence),se_gfp = sd(Fluorescence) / sqrt(n()))
+
+ggplot(isumm, aes(x = Promoter, y = mean_gfp, fill = Protein)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + # 'dodge' puts bars side-by-side
+  geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp),position = position_dodge(width = 0.9), width = 0.2) + theme_minimal() +scale_fill_grey() + # Distinct colors for Staygold/UKG1
+  labs(title = "Protein Expression and Promoter Type",x = "Promoter",y = "Mean FITC (GFP)")
+```
+```{r}
+###Log Bar
+logsum<- TabA2 %>%
+  group_by(Promoter, Protein) %>%
+  summarize(mean_log_gfp = mean(Log_GFP, na.rm = TRUE),se_log_gfp = sd(Log_GFP, na.rm = TRUE) / sqrt(n()),.groups = "drop")
+
+gglogsum<- ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_grey() +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")
+print(gglogsum)
+
+ggsave("gglogsum.png", 
+       plot = gglogsum, 
+       width = 10,       
+       height = 6,      
+       dpi = 300)
+```
+
+
+```{r}
+###ANOVA1
+anova1<-aov(Log_GFP~Promoter*Protein,data=TabA2)
+summary(anova1)
+```
+
+```{r}
+###ANOVA2
+anova2<-aov(Log_GFP~as.factor(`Transformation type`),data=TabA2)
+tk<-TukeyHSD(anova2)
+print(tk)
+```
+
