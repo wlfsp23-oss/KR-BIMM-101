@@ -250,9 +250,30 @@ Plot2_Log<-ggplot(summarydf_log, aes(x = reorder(`Transformation type`, mean_log
   geom_bar(stat = "identity") +scale_fill_gradient(low = "darkgreen", high = "lawngreen") +
   geom_errorbar(aes(ymin = mean_log - se_log, ymax = mean_log + se_log), width = 0.2) +coord_flip() +
   theme_minimal() +
-  scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")
+  scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")+ theme(text = element_text(size = 16))+theme(axis.text.y=element_text(angle=30,hjust = 1))+ theme(legend.position = "none")
 print(Plot2_Log)
 ggsave("Plot2_log.png", 
+       plot = Plot2_Log, 
+       width = 10,       
+       height = 6,      
+       dpi = 300)
+```
+
+```{r}
+summarydf_log2 <- TabA1 %>%
+  filter(grepl("yUKG1|mUKG1", `Transformation type`, ignore.case = TRUE)) %>%
+  group_by(`Transformation type`) %>%
+  summarize(mean_log = mean(Log_GFP, na.rm = TRUE),
+            sd_log = sd(Log_GFP, na.rm = TRUE),
+            n = n(),
+            se_log = sd_log / sqrt(n))
+Plot3_Log<-ggplot(summarydf_log2, aes(x = reorder(`Transformation type`, mean_log),y = mean_log,fill = mean_log)) +
+  geom_bar(stat = "identity") +scale_fill_gradient(low = "darkgreen", high = "lawngreen") +
+  geom_errorbar(aes(ymin = mean_log - se_log, ymax = mean_log + se_log), width = 0.2) +coord_flip() +
+  theme_minimal() +
+  scale_x_discrete(labels = plotlabs) + labs(title = "Log-Transformed Average GFP Expression Across UKG1 GFP",x = "Transformation Type",y = "Average Log10(Mean FITC)",fill = "Log10 Intensity")+ theme(text = element_text(size = 18))+theme(axis.text.y=element_text(angle=50,hjust = 1))+theme(plot.title = element_text(hjust = 0.7))+ theme(legend.position = "none")+theme(plot.title = element_text(size = 14))
+print(Plot3_Log)
+ggsave("Plot3_log.png", 
        plot = Plot2_Log, 
        width = 10,       
        height = 6,      
@@ -268,7 +289,7 @@ isumm<- TabA2 %>%
 ggplot(isumm, aes(x = Promoter, y = mean_gfp, fill = Protein)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + # 'dodge' puts bars side-by-side
   geom_errorbar(aes(ymin = mean_gfp - se_gfp, ymax = mean_gfp + se_gfp),position = position_dodge(width = 0.9), width = 0.2) + theme_minimal() +scale_fill_grey() + # Distinct colors for Staygold/UKG1
-  labs(title = "Protein Expression and Promoter Type",x = "Promoter",y = "Mean FITC (GFP)")
+  labs(title = "Protein Expression and Promoter Type",x = "Promoter",y = "Mean FITC (GFP)")+ theme(text = element_text(size = 16))
 ```
 ```{r}
 ###Log Bar
@@ -277,7 +298,7 @@ logsum<- TabA2 %>%
   summarize(mean_log_gfp = mean(Log_GFP, na.rm = TRUE),se_log_gfp = sd(Log_GFP, na.rm = TRUE) / sqrt(n()),.groups = "drop")
 
 gglogsum<- ggplot(logsum, aes(x = Promoter, y = mean_log_gfp, fill = Protein)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_grey() +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) + geom_errorbar(aes(ymin = mean_log_gfp - se_log_gfp,ymax = mean_log_gfp + se_log_gfp),position = position_dodge(width = 0.9),width = 0.2) + theme_minimal() + scale_fill_grey() +labs(title = "Protein Expression by Promoter Type on Log scale",x = "Promoter",y = "Log10(Mean FITC)")+ theme(text = element_text(size = 16))
 print(gglogsum)
 
 ggsave("gglogsum.png", 
@@ -299,5 +320,18 @@ summary(anova1)
 anova2<-aov(Log_GFP~as.factor(`Transformation type`),data=TabA2)
 tk<-TukeyHSD(anova2)
 print(tk)
+
+tukey_df <- as.data.frame(tk$`as.factor(\`Transformation type\`)`)
+tukey_df$comparison <- rownames(tukey_df)
+rownames(tukey_df) <- NULL
+colnames(tukey_df) <- c("diff", "lwr_CI", "upr_CI", "p_adj", "comparison")
+tukey_df <- tukey_df[, c("comparison", "diff", "lwr_CI", "upr_CI", "p_adj")]
+
+write.csv(tukey_df, "tukey_results.csv", row.names = FALSE)
+```
+```{r}
+tukey_df <- as.data.frame(tk$`as.factor("Transformation type")`)
+
+
 ```
 
